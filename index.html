@@ -56,7 +56,6 @@
 
 <body>
   <h1>이차방정식의 풀이</h1>
-  <!-- 전체 게임 시간(진행 중) 표시 -->
   <div><strong>전체 경과 시간:</strong> <span id="totalTime">0</span>초</div>
   <div><strong>남은 기회:</strong> <span id="lives">3</span></div>
   <div><strong>현재 점수:</strong> <span id="score">0</span></div>
@@ -88,7 +87,8 @@
       <div id="questionText"></div>
       <div id="choicesBox"></div>
     </div>
-    <button onclick="submitAnswer()">정답제출</button>
+    <button id="submitButton" onclick="submitAnswer()">정답제출</button>
+    <button id="nextButton" class="hidden" onclick="nextQuestion()">다음문제</button>
   </div>
 
   <!-- 게임 종료 후 -->
@@ -101,590 +101,220 @@
 
   <script>
   /*
-    문제 데이터 구조:
-    {
-      question: "문제(문자열, LaTeX는 \\( ... \\) 로)",
-      choices: ["보기1 (LaTeX 가능)", "보기2", "보기3", "보기4"],
-      correctIndex: 0~3
-    }
-    '답이 전혀 없는' (해가 아예 없는) 문제는 제외하라고 하셨으므로,
-    모든 문제는 실제 해가 존재합니다.
+    선택된 문제들은 중고등학생이 풀기에 적당한 이차방정식 문제들입니다.
+    그룹1: 인수분해로 풀 수 있는 이차방정식 (13문제)
+    그룹2: 근의공식으로 푸는 이차방정식 (12문제)
+    그룹3: 절댓값이 포함된 이차방정식 (12문제)
+    총 37문제.
   */
-
-  // ------------------------------------------------------------
-  // 모든 문제를 여기 배열에 (총 61문제). 
-  // 순서는 일단 그대로 두고, startGame() 시점에 shuffle해서 출제.
-  // ------------------------------------------------------------
   const allProblems = [
-
-    // ============== [1~16] 1차 방정식들 ==============
-    {
-      question: "\\(3x=0\\)",
-      choices: ["\\(x=0\\)", "\\(x=1\\)", "\\(x=-1\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(5x+2=3x\\)",
-      choices: ["\\(x=1\\)", "\\(x=-1\\)", "\\(x=2\\)", "\\(x=0\\)"],
-      correctIndex: 1
-    },
-    {
-      question: "\\(4x-1=8\\)",
-      choices: ["\\(x=3\\)", "\\(x=\\dfrac{9}{4}\\)", "\\(x=\\dfrac{11}{4}\\)", "해가 없다"],
-      correctIndex: 1
-    },
-    {
-      question: "\\(\\dfrac{x+1}{3} = \\dfrac{x}{4}\\)",
-      choices: ["\\(x=-4\\)", "\\(x=4\\)", "\\(x=3\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(\\dfrac{x-3}{2} -1 = \\dfrac{3-2x}{3}\\)",
-      choices: ["\\(x=-3\\)", "\\(x=3\\)", "해가 무수히 많다", "해가 없다"],
-      correctIndex: 1
-    },
-    {
-      question: "\\(x+2 = 3x -2(x-1)\\)",
-      choices: ["\\(x=-2\\)", "\\(x=2\\)", "\\(x=\\dfrac12\\)", "해가 무수히 많다"],
-      correctIndex: 3
-    },
-    {
-      question: "\\(6x -3(x-1) = 10 - \\bigl(-2x+3\\bigr)\\)",
-      choices: ["\\(x=3\\)", "\\(x=4\\)", "\\(x=-4\\)", "해가 무수히 많다"],
-      correctIndex: 1
-    },
-    {
-      question: "\\(ax=0\\)",
-      choices: [
-        " \\(a=0\\)이면 해가 없다, \\(a\\neq0\\)이면 \\(x=0\\)",
-        " \\(a=0\\)이면 해가 무수히 많다, \\(a\\neq0\\)이면 \\(x=0\\)",
-        " \\(a=0\\)이면 \\(x=0\\), \\(a\\neq0\\)이면 해가 없다",
-        " \\(a=0\\)이면 \\(x=1\\), \\(a\\neq0\\)이면 해가 무수히 많다"
-      ],
-      correctIndex: 1
-    },
-    {
-      question: "\\(a(x-3) = x+3\\)",
-      choices: [
-        "\\(a=1\\)이면 \\(x=\\dfrac{3(a+1)}{a-1}\\), 그 외 해없음",
-        "\\(a=1\\)이면 해가 무수히 많다, \\(a\\neq1\\)이면 \\(x=\\dfrac{3(a+1)}{a-1}\\)",
-        "\\(a=1\\)이면 해가 없다, \\(a\\neq1\\)이면 \\(x=\\dfrac{3(a+1)}{a-1}\\)",
-        "\\(a=0\\)이면 해가 없다, \\(a\\neq1\\)이면 \\(x=\\dfrac{3(a+1)}{a-1}\\)"
-      ],
-      correctIndex: 2
-    },
-    {
-      question: "\\(a(x+1)= x-6\\)",
-      choices: [
-        "\\(a=1\\)이면 해가 무수히 많다, \\(a\\neq1\\)이면 \\(x=\\dfrac{-6-a}{a-1}\\)",
-        "\\(a=1\\)이면 해가 없다, \\(a\\neq1\\)이면 \\(x=\\dfrac{-6-a}{a-1}\\)",
-        "\\(a=1\\)이면 \\(x=-6\\), \\(a\\neq1\\)이면 해가 무수히 많다",
-        "\\(a=0\\)이면 해가 없다, \\(a\\neq1\\)이면 \\(x=\\dfrac{6+a}{1-a}\\)"
-      ],
-      correctIndex: 1
-    },
-    {
-      question: "\\(a(x-a)=2(x-2)\\)",
-      choices: [
-        "\\(a=2\\)이면 해가 없다, \\(a\\neq2\\)이면 \\(x=a+2\\)",
-        "\\(a=2\\)이면 \\(x=2\\), \\(a\\neq2\\)이면 \\(x=a+2\\)",
-        "\\(a=2\\)이면 해가 무수히 많다, \\(a\\neq2\\)이면 \\(x=a+2\\)",
-        "\\(a=2\\)이면 해가 무수히 많다, \\(a\\neq2\\)이면 \\(x=a-2\\)"
-      ],
-      correctIndex: 2
-    },
-    {
-      question: "\\((a-1)x = (a+1)(a-1)\\)",
-      choices: [
-        "\\(a=1\\)이면 해가 없다, \\(a\\neq1\\)이면 \\(x=a+1\\)",
-        "\\(a=1\\)이면 \\(x=a+1\\), \\(a\\neq1\\)이면 해가 없다",
-        "\\(a=1\\)이면 해가 무수히 많다, \\(a\\neq1\\)이면 \\(x=a+1\\)",
-        "\\(a=-1\\)이면 해가 무수히 많다, \\(a\\neq-1\\)이면 \\(x=a+1\\)"
-      ],
-      correctIndex: 2
-    },
-    {
-      question: "\\(a(ax-1)=-ax+1\\)",
-      choices: [
-        "\\(a=0\\)이면 해가 없다, \\(a=-1\\)이면 해가 무수히 많다, 그외 \\(x=\\dfrac{1}{a}\\)",
-        "\\(a=0\\)이면 해가 무수히 많다, \\(a=-1\\)이면 해가 없다, 그외 \\(x=-\\dfrac{1}{a}\\)",
-        "\\(a=0\\)이면 해가 없다, \\(a=-1\\)이면 해가 없다, 그외 \\(x=\\dfrac{1}{a}\\)",
-        "\\(a=0\\)이면 해가 무수히 많다, \\(a=-1\\)이면 해가 무수히 많다, 그외 \\(x=-\\dfrac{1}{a}\\)"
-      ],
-      correctIndex: 0
-    },
-    {
-      question: "\\(3x(3+a) - a(2x+2)=4a\\)",
-      choices: [
-        "\\(a=-9\\)이면 해가 없다, \\(a\\neq-9\\)이면 \\(x=\\dfrac{6a}{9+a}\\)",
-        "\\(a=-9\\)이면 해가 무수히 많다, \\(a\\neq-9\\)이면 \\(x=-\\dfrac{6a}{9+a}\\)",
-        "\\(a=-9\\)이면 해가 없다, \\(a\\neq-9\\)이면 \\(x=-\\dfrac{6}{9+a}\\)",
-        "\\(a=9\\)이면 해가 없다, \\(a\\neq9\\)이면 \\(x=\\dfrac{6a}{9+a}\\)"
-      ],
-      correctIndex: 0
-    },
-    {
-      question: "\\((a^2-4)x = a+2\\)",
-      choices: [
-        "\\(a=2\\)이면 해가 무수히 많다, \\(a=-2\\)이면 해가 없다, 그외 \\(x=\\dfrac{1}{a-2}\\)",
-        "\\(a=2\\)이면 해가 없다, \\(a=-2\\)이면 해가 무수히 많다, 그외 \\(x=\\dfrac{1}{a-2}\\)",
-        "\\(a=2\\)이면 \\(x=\\dfrac{1}{a-2}\\), \\(a=-2\\)이면 해가 없다, 그외 무수히 많다",
-        "\\(a=2\\)이면 해가 없다, \\(a=-2\\)이면 해가 없다, 그외 \\(x=\\dfrac{1}{a-2}\\)"
-      ],
-      correctIndex: 1
-    },
-    {
-      question: "\\(-2x(1-a) - x(4a-1)=5a+1\\)",
-      choices: [
-        "\\(a=-\\tfrac12\\)이면 해가 없다, 그외 \\(x=-\\dfrac{5a+1}{2a+1}\\)",
-        "\\(a=-\\tfrac12\\)이면 해가 없다, 그외 \\(x=\\dfrac{5a+1}{2a+1}\\)",
-        "\\(a=-\\tfrac12\\)이면 해가 무수히 많다, 그외 \\(x=-\\dfrac{5a+1}{2a+1}\\)",
-        "\\(a=-\\tfrac12\\)이면 해가 무수히 많다, 그외 \\(x=0\\)"
-      ],
-      correctIndex: 0
-    },
-
-    // ============== [17~23] 절대값 1차 방정식들 ==============
-    {
-      question: "\\(|x-1| = 2x + 1\\)",
-      choices: ["\\(x=0\\)", "\\(x=1\\)", "\\(x=-2\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(|x+1| = 3x -1\\)",
-      choices: ["\\(x=1\\)", "\\(x=0\\)", "\\(x=-1\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(|x-5| = 3x + 7\\)",
-      choices: ["\\(x=-\\tfrac12\\)", "\\(x=-6\\)", "\\(x=5\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(|x+1| + |x-2| = 4\\)",
-      choices: ["\\(\\{-1.5,\\;2.5\\}\\)", "\\(\\{-1,\\;3\\}\\)", "\\(\\{-1.5,\\;3\\}\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(|x+1| + |x+2| = 5\\)",
-      choices: ["\\(\\{-4,\\;1\\}\\)", "\\(\\{-2,\\;-1\\}\\)", "\\(\\{-4,\\;-1\\}\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(|x-1| + |x+4| = 5x + 1\\)",
-      choices: ["\\(x=\\tfrac45\\)", "\\(x=\\tfrac47\\)", "\\(x=1\\)", "해가 없다"],
-      correctIndex: 0
-    },
-    {
-      question: "\\(|1-x| + |3-x| = x + 3\\)",
-      choices: ["\\(\\{\\tfrac13,\\;7\\}\\)", "\\(\\{-1,\\;7\\}\\)", "\\(\\{\\tfrac13\\}\\)", "해가 없다"],
-      correctIndex: 0
-    },
-
-    // ============== [24~37] 인수분해 이차방정식들 ==============
+    // 그룹 1: 인수분해 이차방정식들
     {
       question: "\\(x^2 - x - 2 = 0\\)",
-      choices: [
-        "\\(x=2,\\;-1\\)",
-        "\\(x=1,\\;-2\\)",
-        "\\(x=2\\)",
-        "\\(x=-1\\)"
-      ],
+      choices: ["\\(x=2,\\;-1\\)", "\\(x=1,\\;-2\\)", "\\(x=2\\)", "\\(x=-1\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 - x - 20 = 0\\)",
-      choices: [
-        "\\(x=4,\\;-5\\)",
-        "\\(x=5,\\;-4\\)",
-        "\\(x=-5\\)",
-        "\\(x=-4\\)"
-      ],
+      choices: ["\\(x=4,\\;-5\\)", "\\(x=5,\\;-4\\)", "\\(x=-5\\)", "\\(x=-4\\)"],
       correctIndex: 1
     },
     {
       question: "\\(x^2 + x - 20 = 0\\)",
-      choices: [
-        "\\(x=-4,\\;5\\)",
-        "\\(x=4\\)",
-        "\\(x=-5,\\;4\\)",
-        "\\(x=-4,\\;5\\)"
-      ],
+      choices: ["\\(x=-4,\\;5\\)", "\\(x=4\\)", "\\(x=-5,\\;4\\)", "\\(x=-4,\\;5\\)"],
       correctIndex: 2
     },
     {
       question: "\\(x^2 + 2x - 15 = 0\\)",
-      choices: [
-        "\\(x=3\\)",
-        "\\(x=-5\\)",
-        "\\(x=-3,\\;5\\)",
-        "\\(x=3,\\;-5\\)"
-      ],
+      choices: ["\\(x=3\\)", "\\(x=-5\\)", "\\(x=-3,\\;5\\)", "\\(x=3,\\;-5\\)"],
       correctIndex: 3
     },
     {
       question: "\\(x^2 - 4x + 4 = 0\\)",
-      choices: [
-        "\\(x=2\\) (중근)",
-        "\\(x=2,\\;-2\\)",
-        "\\(x=-2\\) (중근)",
-        "\\(x=4,\\;-4\\)"
-      ],
+      choices: ["\\(x=2\\) (중근)", "\\(x=2,\\;-2\\)", "\\(x=-2\\) (중근)", "\\(x=4,\\;-4\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 - 10x + 16 = 0\\)",
-      choices: [
-        "\\(x=2,\\;-8\\)",
-        "\\(x=8,\\;-2\\)",
-        "\\(x=2,\\;8\\)",
-        "\\(x=4,\\;6\\)"
-      ],
+      choices: ["\\(x=2,\\;-8\\)", "\\(x=8,\\;-2\\)", "\\(x=2,\\;8\\)", "\\(x=4,\\;6\\)"],
       correctIndex: 2
     },
     {
       question: "\\(2x^2 + x - 1 = 0\\)",
-      choices: [
-        "\\(x=1,\\; -\\tfrac12\\)",
-        "\\(x=-1,\\; \\tfrac12\\)",
-        "\\(x=-\\tfrac12,\\;2\\)",
-        "\\(x=-2,\\;1\\)"
-      ],
+      choices: ["\\(x=1,\\;-\\tfrac12\\)", "\\(x=-1,\\;\\tfrac12\\)", "\\(x=-\\tfrac12,\\;2\\)", "\\(x=-2,\\;1\\)"],
       correctIndex: 1
     },
     {
       question: "\\(2x^2 - x - 1 = 0\\)",
-      choices: [
-        "\\(x=1,\\;-\\tfrac12\\)",
-        "\\(x=\\tfrac12,\\;-1\\)",
-        "\\(x=-1,\\;\\tfrac12\\)",
-        "\\(x=2,\\;-\\tfrac12\\)"
-      ],
+      choices: ["\\(x=1,\\;-\\tfrac12\\)", "\\(x=\\tfrac12,\\;-1\\)", "\\(x=-1,\\;\\tfrac12\\)", "\\(x=2,\\;-\\tfrac12\\)"],
       correctIndex: 0
     },
     {
       question: "\\(9x^2 - 6x + 1 = 0\\)",
-      choices: [
-        "\\(x=\\tfrac13,\\; -\\tfrac13\\)",
-        "\\(x=\\tfrac13\\) (중근)",
-        "\\(x=\\tfrac13,\\;1\\)",
-        "\\(x=-\\tfrac13\\) (중근)"
-      ],
+      choices: ["\\(x=\\tfrac13,\\; -\\tfrac13\\)", "\\(x=\\tfrac13\\) (중근)", "\\(x=\\tfrac13,\\;1\\)", "\\(x=-\\tfrac13\\) (중근)"],
       correctIndex: 1
     },
     {
       question: "\\(6x^2 - 5x - 4 = 0\\)",
-      choices: [
-        "\\(x=\\tfrac23,\\; -\\tfrac12\\)",
-        "\\(x=4,\\;-1\\)",
-        "\\(x=-\\tfrac43,\\;\\tfrac12\\)",
-        "\\(x=\\tfrac43,\\; -\\tfrac12\\)"
-      ],
+      choices: ["\\(x=\\tfrac23,\\; -\\tfrac12\\)", "\\(x=4,\\;-1\\)", "\\(x=-\\tfrac43,\\;\\tfrac12\\)", "\\(x=\\tfrac43,\\; -\\tfrac12\\)"],
       correctIndex: 3
     },
     {
       question: "\\(5x^2 - 9x - 2 = 0\\)",
-      choices: [
-        "\\(x=2,\\;-\\tfrac15\\)",
-        "\\(x=\\tfrac12,\\;-5\\)",
-        "\\(x=5,\\;-2\\)",
-        "\\(x=9,\\;-\\tfrac12\\)"
-      ],
+      choices: ["\\(x=2,\\;-\\tfrac15\\)", "\\(x=\\tfrac12,\\;-5\\)", "\\(x=5,\\;-2\\)", "\\(x=9,\\;-\\tfrac12\\)"],
       correctIndex: 0
     },
     {
       question: "\\(\\tfrac12 x^2 - 5x + 12 = 0\\) 즉 \\(x^2 - 10x + 24=0\\)",
-      choices: [
-        "\\(x=4,\\;-6\\)",
-        "\\(x=-4,\\;6\\)",
-        "\\(x=4,\\;6\\)",
-        "\\(x=-4,\\;-6\\)"
-      ],
+      choices: ["\\(x=4,\\;-6\\)", "\\(x=-4,\\;6\\)", "\\(x=4,\\;6\\)", "\\(x=-4,\\;-6\\)"],
       correctIndex: 2
     },
     {
-      question: "\\(x^2 - \\tfrac12 x - \\tfrac12 =0\\) 즉 \\(2x^2 - x -1=0\\)",
-      choices: [
-        "\\(x=1,\\;-\\tfrac12\\)",
-        "\\(x=2,\\;-1\\)",
-        "\\(x=-1,\\;\\tfrac12\\)",
-        "\\(x=-2,\\;1\\)"
-      ],
-      correctIndex: 0
-    },
-    {
       question: "\\(x(x+3)=2(x-3)+8\\) 즉 \\(x^2+3x=2x+2\\)",
-      choices: [
-        "\\(x=2,\\;-1\\)",
-        "\\(x=1,\\;-2\\)",
-        "\\(x=1,\\;2\\)",
-        "\\(x=-1,\\;-2\\)"
-      ],
+      choices: ["\\(x=2,\\;-1\\)", "\\(x=1,\\;-2\\)", "\\(x=1,\\;2\\)", "\\(x=-1,\\;-2\\)"],
       correctIndex: 1
     },
-
-    // ============== [54~65] 근의공식 이차방정식들 ==============
+    
+    // 그룹 2: 근의공식 이차방정식들
     {
       question: "\\(x^2 - x -5=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=\\dfrac{1\\pm\\sqrt{21}}{2}\\)",
-        "\\(x=1\\pm 2i\\)",
-        "\\(x=\\dfrac{1\\pm\\sqrt{5}}{2}\\)",
-        "\\(x=\\dfrac{-1\\pm\\sqrt{21}}{2}\\)"
-      ],
+      choices: ["\\(x=\\dfrac{1\\pm\\sqrt{21}}{2}\\)", "\\(x=1\\pm 2i\\)", "\\(x=\\dfrac{1\\pm\\sqrt{5}}{2}\\)", "\\(x=\\dfrac{-1\\pm\\sqrt{21}}{2}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 + 4x - 2=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=-2\\pm\\sqrt{6}\\)",
-        "\\(x=2\\pm\\sqrt{6}\\)",
-        "\\(x=-4\\pm\\sqrt{6}\\)",
-        "\\(x=-2\\pm i\\sqrt{6}\\)"
-      ],
+      choices: ["\\(x=-2\\pm\\sqrt{6}\\)", "\\(x=2\\pm\\sqrt{6}\\)", "\\(x=-4\\pm\\sqrt{6}\\)", "\\(x=-2\\pm i\\sqrt{6}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 + 2x +4=0\\) (\\(\\Delta<0\\), 허근)",
-      choices: [
-        "\\(x=-1\\pm i\\sqrt{3}\\)",
-        "\\(x=1\\pm\\sqrt{3}\\)",
-        "\\(x=-2\\pm i\\sqrt{3}\\)",
-        "\\(x=2\\pm i\\sqrt{3}\\)"
-      ],
+      choices: ["\\(x=-1\\pm i\\sqrt{3}\\)", "\\(x=1\\pm\\sqrt{3}\\)", "\\(x=-2\\pm i\\sqrt{3}\\)", "\\(x=2\\pm i\\sqrt{3}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 - 3x +4=0\\) (\\(\\Delta<0\\), 허근)",
-      choices: [
-        "\\(x=\\dfrac{3\\pm\\sqrt{7}}{2}\\)",
-        "\\(x=\\dfrac{3\\pm i\\sqrt{7}}{2}\\)",
-        "\\(x=\\dfrac{-3\\pm i\\sqrt{7}}{2}\\)",
-        "\\(x=3\\pm i\\sqrt{7}\\)"
-      ],
+      choices: ["\\(x=\\dfrac{3\\pm\\sqrt{7}}{2}\\)", "\\(x=\\dfrac{3\\pm i\\sqrt{7}}{2}\\)", "\\(x=\\dfrac{-3\\pm i\\sqrt{7}}{2}\\)", "\\(x=3\\pm i\\sqrt{7}\\)"],
       correctIndex: 1
     },
     {
       question: "\\(x^2 -6x +1=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=3\\pm 2\\sqrt{2}\\)",
-        "\\(x=3\\pm\\sqrt{2}\\)",
-        "\\(x=-3\\pm 2\\sqrt{2}\\)",
-        "\\(x=6\\pm\\sqrt{32}\\)"
-      ],
+      choices: ["\\(x=3\\pm 2\\sqrt{2}\\)", "\\(x=3\\pm\\sqrt{2}\\)", "\\(x=-3\\pm 2\\sqrt{2}\\)", "\\(x=6\\pm\\sqrt{32}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 + x -2=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=2,\\;-1\\)",
-        "\\(x=1,\\;2\\)",
-        "\\(x=-2,\\;1\\)",
-        "\\(x=-1,\\;2\\)"
-      ],
+      choices: ["\\(x=2,\\;-1\\)", "\\(x=1,\\;2\\)", "\\(x=-2,\\;1\\)", "\\(x=-1,\\;2\\)"],
       correctIndex: 2
     },
     {
       question: "\\(x^2 -3x -1=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=\\dfrac{3\\pm\\sqrt{13}}{2}\\)",
-        "\\(x=\\dfrac{3\\pm\\sqrt{13}}{4}\\)",
-        "\\(x=\\dfrac{-3\\pm\\sqrt{13}}{2}\\)",
-        "\\(x=\\dfrac{-3\\pm\\sqrt{13}}{4}\\)"
-      ],
+      choices: ["\\(x=\\dfrac{3\\pm\\sqrt{13}}{2}\\)", "\\(x=\\dfrac{3\\pm\\sqrt{13}}{4}\\)", "\\(x=\\dfrac{-3\\pm\\sqrt{13}}{2}\\)", "\\(x=\\dfrac{-3\\pm\\sqrt{13}}{4}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 -2x -5=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=1\\pm\\sqrt{6}\\)",
-        "\\(x=2\\pm\\sqrt{5}\\)",
-        "\\(x=-1\\pm\\sqrt{6}\\)",
-        "\\(x=-1\\pm\\sqrt{5}\\)"
-      ],
+      choices: ["\\(x=1\\pm\\sqrt{6}\\)", "\\(x=2\\pm\\sqrt{5}\\)", "\\(x=-1\\pm\\sqrt{6}\\)", "\\(x=-1\\pm\\sqrt{5}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(2x^2 -2x -1=0\\) (\\(\\Delta>0\\), 실근)",
-      choices: [
-        "\\(x=\\dfrac{1\\pm\\sqrt{3}}{2}\\)",
-        "\\(x=\\dfrac{2\\pm\\sqrt{3}}{2}\\)",
-        "\\(x=\\dfrac{1\\pm\\sqrt{3}}{4}\\)",
-        "\\(x=\\dfrac{1\\pm\\sqrt{3}}{3}\\)"
-      ],
+      choices: ["\\(x=\\dfrac{1\\pm\\sqrt{3}}{2}\\)", "\\(x=\\dfrac{2\\pm\\sqrt{3}}{2}\\)", "\\(x=\\dfrac{1\\pm\\sqrt{3}}{4}\\)", "\\(x=\\dfrac{1\\pm\\sqrt{3}}{3}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(2x^2 + x +1=0\\) (\\(\\Delta<0\\), 허근)",
-      choices: [
-        "\\(\\dfrac{1\\pm i\\sqrt{7}}{4}\\)",
-        "\\(\\dfrac{-1\\pm\\sqrt{7}}{4}\\)",
-        "\\(\\dfrac{-1\\pm i\\sqrt{7}}{4}\\)",
-        "\\(\\dfrac{-1\\pm i\\sqrt{7}}{2}\\)"
-      ],
+      choices: ["\\(\\dfrac{1\\pm i\\sqrt{7}}{4}\\)", "\\(\\dfrac{-1\\pm\\sqrt{7}}{4}\\)", "\\(\\dfrac{-1\\pm i\\sqrt{7}}{4}\\)", "\\(\\dfrac{-1\\pm i\\sqrt{7}}{2}\\)"],
       correctIndex: 2
     },
     {
       question: "\\(3x^2 - x +1=0\\) (\\(\\Delta<0\\), 허근)",
-      choices: [
-        "\\(\\dfrac{1\\pm i\\sqrt{11}}{6}\\)",
-        "\\(\\dfrac{1\\pm i\\sqrt{11}}{3}\\)",
-        "\\(\\dfrac{-1\\pm i\\sqrt{11}}{6}\\)",
-        "\\(\\dfrac{1\\pm\\sqrt{11}}{6}\\)"
-      ],
+      choices: ["\\(\\dfrac{1\\pm i\\sqrt{11}}{6}\\)", "\\(\\dfrac{1\\pm i\\sqrt{11}}{3}\\)", "\\(\\dfrac{-1\\pm i\\sqrt{11}}{6}\\)", "\\(\\dfrac{1\\pm\\sqrt{11}}{6}\\)"],
       correctIndex: 0
     },
     {
       question: "\\(3x^2 -4x +2=0\\) (\\(\\Delta<0\\), 허근)",
-      choices: [
-        "\\(\\dfrac{2\\pm i\\sqrt{2}}{3}\\)",
-        "\\(\\dfrac{4\\pm 2i\\sqrt{2}}{3}\\)",
-        "\\(\\dfrac{2\\pm 2i\\sqrt{2}}{6}\\)",
-        "\\(\\dfrac{2\\pm i\\sqrt{5}}{3}\\)"
-      ],
+      choices: ["\\(\\dfrac{2\\pm i\\sqrt{2}}{3}\\)", "\\(\\dfrac{4\\pm 2i\\sqrt{2}}{3}\\)", "\\(\\dfrac{2\\pm 2i\\sqrt{2}}{6}\\)", "\\(\\dfrac{2\\pm i\\sqrt{5}}{3}\\)"],
       correctIndex: 0
     },
-
-    // ============== [74~85] 절댓값이 포함된 이차방정식들 ==============
+    
+    // 그룹 3: 절댓값이 포함된 이차방정식들
     {
       question: "\\(x^2 - |x|=0\\)",
-      choices: [
-        "\\(x=0,\\;\\pm1\\)",
-        "\\(x=0,\\;1\\)",
-        "\\(x=-1,\\;1\\)",
-        "\\(x=-1,\\;2\\)"
-      ],
+      choices: ["\\(x=0,\\;\\pm1\\)", "\\(x=0,\\;1\\)", "\\(x=-1,\\;1\\)", "\\(x=-1,\\;2\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 -4|x|=0\\)",
-      choices: [
-        "\\(x=\\pm4\\)",
-        "\\(x=0,\\;\\pm4\\)",
-        "\\(x=0,\\;4\\)",
-        "\\(x=-4,\\;4\\)"
-      ],
+      choices: ["\\(x=\\pm4\\)", "\\(x=0,\\;\\pm4\\)", "\\(x=0,\\;4\\)", "\\(x=-4,\\;4\\)"],
       correctIndex: 1
     },
     {
       question: "\\(x^2 + 2|x| -3=0\\)",
-      choices: [
-        "\\(x=-1,\\;1\\)",
-        "\\(x=1,\\;2\\)",
-        "\\(x=-1,\\;2\\)",
-        "\\(x=0,\\;1\\)"
-      ],
+      choices: ["\\(x=-1,\\;1\\)", "\\(x=1,\\;2\\)", "\\(x=-1,\\;2\\)", "\\(x=0,\\;1\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 + 3|x| -4=0\\)",
-      choices: [
-        "\\(x=-1,\\;1\\)",
-        "\\(x=1,\\;2\\)",
-        "\\(x=-1,\\;-2\\)",
-        "\\(x=0,\\;1\\)"
-      ],
+      choices: ["\\(x=-1,\\;1\\)", "\\(x=1,\\;2\\)", "\\(x=-1,\\;-2\\)", "\\(x=0,\\;1\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 -4|x| +3=0\\)",
-      choices: [
-        "\\(x=-1,\\;1\\)",
-        "\\(x=-3,\\;3\\)",
-        "\\(x=-3,\\;-1,\\;1,\\;3\\)",
-        "\\(x=-1,\\;-3\\)"
-      ],
+      choices: ["\\(x=-1,\\;1\\)", "\\(x=-3,\\;3\\)", "\\(x=-3,\\;-1,\\;1,\\;3\\)", "\\(x=-1,\\;-3\\)"],
       correctIndex: 2
     },
     {
       question: "\\(x^2 -|x| -20=0\\)",
-      choices: [
-        "\\(x=\\pm4\\)",
-        "\\(x=\\pm5\\)",
-        "\\(x=\\pm6\\)",
-        "\\(x=\\pm10\\)"
-      ],
+      choices: ["\\(x=\\pm4\\)", "\\(x=\\pm5\\)", "\\(x=\\pm6\\)", "\\(x=\\pm10\\)"],
       correctIndex: 1
     },
     {
       question: "\\(x^2 -5|x| -6=0\\)",
-      choices: [
-        "\\(x=\\pm6\\)",
-        "\\(x=\\pm5\\)",
-        "\\(x=\\pm1\\)",
-        "\\(x=-6,\\;6,\\;0\\)"
-      ],
+      choices: ["\\(x=\\pm6\\)", "\\(x=\\pm5\\)", "\\(x=\\pm1\\)", "\\(x=-6,\\;6,\\;0\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 -5|x| +2=0\\)",
-      choices: [
-        "\\(x=-3,\\;-2,\\;2,\\;3\\)",
-        "\\(x=\\dfrac{5\\pm\\sqrt{17}}{2},\\;\\dfrac{-5\\pm\\sqrt{17}}{2}\\)",
-        "\\(x=\\dfrac{5\\pm\\sqrt{21}}{2},\\;\\dfrac{-5\\pm\\sqrt{21}}{2}\\)",
-        "\\(x=\\dfrac{5\\pm\\sqrt{17}}{4},\\;\\dfrac{-5\\pm\\sqrt{17}}{4}\\)"
-      ],
+      choices: ["\\(x=-3,\\;-2,\\;2,\\;3\\)", "\\(x=\\dfrac{5\\pm\\sqrt{17}}{2},\\;\\dfrac{-5\\pm\\sqrt{17}}{2}\\)", "\\(x=\\dfrac{5\\pm\\sqrt{21}}{2},\\;\\dfrac{-5\\pm\\sqrt{21}}{2}\\)", "\\(x=\\dfrac{5\\pm\\sqrt{17}}{4},\\;\\dfrac{-5\\pm\\sqrt{17}}{4}\\)"],
       correctIndex: 1
     },
     {
       question: "\\(3x^2 -2|x| -5=0\\)",
-      choices: [
-        "\\(x=\\pm \\tfrac{5}{3}\\)",
-        "\\(x=\\pm \\tfrac{3}{5}\\)",
-        "\\(x=\\pm \\tfrac{2}{5}\\)",
-        "\\(x=\\pm1\\)"
-      ],
+      choices: ["\\(x=\\pm \\tfrac{5}{3}\\)", "\\(x=\\pm \\tfrac{3}{5}\\)", "\\(x=\\pm \\tfrac{2}{5}\\)", "\\(x=\\pm1\\)"],
       correctIndex: 0
     },
     {
       question: "\\(2x^2 -7|x| +3=0\\)",
-      choices: [
-        "\\(x=-3,\\;-\\tfrac12,\\;\\tfrac12,\\;3\\)",
-        "\\(x=-3,\\;-2,\\;2,\\;3\\)",
-        "\\(x=-3,\\;3\\)",
-        "\\(x=-\\tfrac12,\\;\\tfrac12\\)"
-      ],
+      choices: ["\\(x=-3,\\;-\\tfrac12,\\;\\tfrac12,\\;3\\)", "\\(x=-3,\\;-2,\\;2,\\;3\\)", "\\(x=-3,\\;3\\)", "\\(x=-\\tfrac12,\\;\\tfrac12\\)"],
       correctIndex: 0
     },
     {
       question: "\\(x^2 + |2x-1| = 2\\)",
-      choices: [
-        "\\(x=1,\\;1+\\sqrt{2}\\)",
-        "\\(x=1,\\;1-\\sqrt{2}\\)",
-        "\\(x=-1,\\;-1-\\sqrt{2}\\)",
-        "\\(x=\\tfrac12,\\;-1\\)"
-      ],
+      choices: ["\\(x=1,\\;1+\\sqrt{2}\\)", "\\(x=1,\\;1-\\sqrt{2}\\)", "\\(x=-1,\\;-1-\\sqrt{2}\\)", "\\(x=\\tfrac12,\\;-1\\)"],
       correctIndex: 1
     },
     {
       question: "\\(x^2 -2|x-1| -1=0\\)",
-      choices: [
-        "\\(x=-3,\\;0\\)",
-        "\\(x=-1,\\;3\\)",
-        "\\(x=-3,\\;1\\)",
-        "\\(x=0,\\;1\\)"
-      ],
+      choices: ["\\(x=-3,\\;0\\)", "\\(x=-1,\\;3\\)", "\\(x=-3,\\;1\\)", "\\(x=0,\\;1\\)"],
       correctIndex: 2
     }
   ];
 
-  // 사용자가 선택한 난이도에 따라 문제당 제한시간과 득점을 결정
-  let timePerQuestion = Infinity;  // 기본: 하(시간제한없음)
-  let pointPerQuestion = 10;       // 기본: 하(10점)
+  // 게임 관리 변수들
+  let timePerQuestion = Infinity;  // 난이도에 따라 설정
+  let pointPerQuestion = 10;
+  let currentIndex = 0;
+  let lives = 3;
+  let score = 0;
+  let totalStartTime = 0;
+  let totalTimer = null;
+  let totalElapsed = 0;
+  let questionTimer = null;
+  let timeLeft = 0;
+  let playerName = "";
+  let questionAnswered = false; // 문제에 대한 정답 여부 확인 플래그
 
-  // 전체 게임 관리 변수들
-  let currentIndex = 0;        // 현재 문제 인덱스
-  let lives = 3;               // 기회 3번
-  let score = 0;               // 점수
-  let totalStartTime = 0;      // 게임 시작 시각
-  let totalTimer = null;       // 전체 시간 측정 타이머
-  let totalElapsed = 0;        // 누적 시간(초 단위)
-
-  let questionTimer = null;    // 문제별 타이머
-  let timeLeft = 0;            // 문제 제한 시간(실제 남은 시간)
-  let playerName = "";         // 플레이어 이름
-
-  // ============= 난이도 선택 =============
+  // 난이도 선택 후 게임 시작
   function startGame() {
     const radios = document.getElementsByName("difficulty");
     for (let r of radios) {
@@ -713,7 +343,6 @@
     const nameInput = document.getElementById("playerName");
     playerName = nameInput.value.trim() || "플레이어";
 
-    // UI 전환
     document.getElementById("startScreen").classList.add("hidden");
     document.getElementById("quizScreen").classList.remove("hidden");
 
@@ -729,54 +358,51 @@
 
     // 전체 시간 타이머 시작
     totalStartTime = Date.now();
-    totalTimer = setInterval(()=>{
+    totalTimer = setInterval(() => {
       const now = Date.now();
-      totalElapsed = Math.floor((now - totalStartTime)/1000);
+      totalElapsed = Math.floor((now - totalStartTime) / 1000);
       document.getElementById("totalTime").innerText = totalElapsed;
     }, 1000);
 
-    // 첫 문제 표시
     showQuestion();
   }
 
-  // ============= 문제 표시 로직 =============
+  // 문제 표시 로직
   function showQuestion() {
-    if (lives<=0) {
-      // 이미 기회 소진 -> 게임종료
+    // 다음문제 버튼 숨기고 제출버튼 활성화
+    document.getElementById("nextButton").classList.add("hidden");
+    document.getElementById("submitButton").disabled = false;
+    questionAnswered = false;
+
+    if (lives <= 0) {
       endGame();
       return;
     }
 
-    // 문제 모두 소진했으면 => 무한 랜덤모드
-    // (문제는 끝없이 반복해서 랜덤 추출)
-    // 하지만 요구사항에 "모든 문제 끝나면 랜덤으로" 라 했으므로
-    // currentIndex >= allProblems.length 이면 무한랜덤
+    // 문제 선택: 문제 배열이 끝나면 무한 랜덤
     let problemObj = null;
     if (currentIndex < allProblems.length) {
       problemObj = allProblems[currentIndex];
     } else {
-      // 무한랜덤
-      problemObj = allProblems[ Math.floor(Math.random()*allProblems.length) ];
+      problemObj = allProblems[Math.floor(Math.random() * allProblems.length)];
     }
 
-    // UI에 표시
+    // 문제 및 보기 렌더링
     const qText = document.getElementById("questionText");
     qText.innerHTML = "<strong>문제를 풀어보세요:</strong> " + problemObj.question;
 
-    // 보기도 섞기 위해, choices+correctIndex를 동적으로 재구성
     const localChoices = [];
-    for (let i=0; i<problemObj.choices.length; i++) {
+    for (let i = 0; i < problemObj.choices.length; i++) {
       localChoices.push({
         text: problemObj.choices[i],
-        isCorrect: (i===problemObj.correctIndex)
+        isCorrect: (i === problemObj.correctIndex)
       });
     }
     shuffleArray(localChoices);
 
-    // 렌더링
     const cBox = document.getElementById("choicesBox");
     cBox.innerHTML = "";
-    localChoices.forEach( (c, idx) => {
+    localChoices.forEach((c, idx) => {
       const div = document.createElement("div");
       div.className = "choiceItem";
       div.innerHTML = `
@@ -788,52 +414,51 @@
       cBox.appendChild(div);
     });
 
-    // MathJax 렌더링
     MathJax.typeset();
 
     // 시간제한(에너지바) 세팅
     if (questionTimer) {
       clearInterval(questionTimer);
-      questionTimer=null;
+      questionTimer = null;
     }
-    timeLeft = timePerQuestion===Infinity ? Infinity : timePerQuestion;
-
+    timeLeft = (timePerQuestion === Infinity) ? Infinity : timePerQuestion;
     updateEnergyBar();
-    if (timeLeft!==Infinity) {
-      questionTimer = setInterval(()=>{
-        timeLeft -= 0.2; // 0.2초마다 줄인다(보기에 좀 더 매끄럽게)
+    if (timeLeft !== Infinity) {
+      questionTimer = setInterval(() => {
+        timeLeft -= 0.2;
         updateEnergyBar();
-        if (timeLeft<=0) {
+        if (timeLeft <= 0) {
           clearInterval(questionTimer);
-          questionTimer=null;
-          // 시간 초과 -> 기회 1 감소 & 정답 표시후 다음문제
-          lives--;
-          document.getElementById("lives").innerText = lives;
-          alert("시간 초과! 기회가 1 감소합니다.");
-          showCorrectAnswer(problemObj);
-          currentIndex++;
-          showQuestion();
+          questionTimer = null;
+          if (!questionAnswered) {
+            lives--;
+            document.getElementById("lives").innerText = lives;
+            alert("시간 초과! 기회가 1 감소합니다.");
+            showCorrectAnswer(problemObj);
+            questionAnswered = true;
+            document.getElementById("submitButton").disabled = true;
+            document.getElementById("nextButton").classList.remove("hidden");
+          }
         }
       }, 200);
     }
   }
 
-  // ============= 에너지바 UI =============
+  // 에너지바 UI 업데이트
   function updateEnergyBar() {
     const bar = document.getElementById("energyBar");
-    if (timeLeft===Infinity) {
+    if (timeLeft === Infinity) {
       bar.style.width = "100%";
     } else {
-      const ratio = Math.max(0, timeLeft/timePerQuestion);
-      bar.style.width = (ratio*100)+"%";
+      const ratio = Math.max(0, timeLeft / timePerQuestion);
+      bar.style.width = (ratio * 100) + "%";
     }
   }
 
-  // ============= 정답 제출 =============
+  // 정답 제출 시 처리 (한번 제출 후 "다음문제" 버튼 활성화)
   function submitAnswer() {
-    if (lives<=0) return;
+    if (questionAnswered) return;
 
-    // 라디오체크 확인
     const radios = document.getElementsByName("currentChoice");
     let checkedValue = null;
     for (let r of radios) {
@@ -842,24 +467,21 @@
         break;
       }
     }
-    if (checkedValue===null) {
+    if (checkedValue === null) {
       alert("보기를 선택하세요!");
       return;
     }
-
-    // 제한시간 타이머 정리
     if (questionTimer) {
       clearInterval(questionTimer);
-      questionTimer=null;
+      questionTimer = null;
     }
+    document.getElementById("submitButton").disabled = true;
 
-    // 정답판정
-    const isCorrect = (checkedValue==="true");
-    const problemObj = 
-      currentIndex<allProblems.length 
-        ? allProblems[currentIndex] 
-        : null; // 무한랜덤모드 시엔...
-    
+    const isCorrect = (checkedValue === "true");
+    const problemObj =
+      currentIndex < allProblems.length
+        ? allProblems[currentIndex]
+        : null;
     if (isCorrect) {
       score += pointPerQuestion;
       document.getElementById("score").innerText = score;
@@ -870,59 +492,57 @@
       alert("오답입니다!");
       if (problemObj) showCorrectAnswer(problemObj);
     }
-
-    currentIndex++;
-    // 기회 0이면 종료
-    if (lives<=0) {
-      endGame();
-    } else {
-      showQuestion();
-    }
+    questionAnswered = true;
+    document.getElementById("nextButton").classList.remove("hidden");
   }
 
-  // ============= 정답 보여주기(틀렸을 때) =============
+  // 다음 문제로 넘어가는 함수 (정답/오답 후 버튼 클릭 시)
+  function nextQuestion() {
+    document.getElementById("nextButton").classList.add("hidden");
+    if (lives <= 0) {
+      endGame();
+      return;
+    }
+    currentIndex++;
+    showQuestion();
+  }
+
+  // 오답 시 정답 표시
   function showCorrectAnswer(prob) {
-    // 정답 choice를 표시
     const correctAns = prob.choices[prob.correctIndex];
     alert("정답: " + correctAns);
   }
 
-  // ============= 게임 종료 =============
+  // 게임 종료 처리
   function endGame() {
-    // 모든 타이머 정리
     if (questionTimer) {
       clearInterval(questionTimer);
-      questionTimer=null;
+      questionTimer = null;
     }
     if (totalTimer) {
       clearInterval(totalTimer);
-      totalTimer=null;
+      totalTimer = null;
     }
-
-    // 최종점수 표시
     document.getElementById("quizScreen").classList.add("hidden");
     document.getElementById("endScreen").classList.remove("hidden");
     document.getElementById("finalScore").innerText = score;
   }
 
-  // ============= 배열 셔플 함수 =============
+  // 배열 셔플 함수
   function shuffleArray(arr) {
-    for (let i=arr.length-1; i>0; i--) {
-      const j = Math.floor(Math.random()*(i+1));
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
   }
 
-  // ============= 점수 전송 로직 =============
+  // 점수 전송 로직
   async function sendScore() {
-    // 총 경과시간을 초단위로
     const elapsedTime = totalElapsed;
-
-    // 실제 전송
     saveData("이차방정식의 풀이", playerName, score, elapsedTime);
   }
 
-  // ============= 주어진 함수 (서버전송) =============
+  // 서버 전송 함수
   async function saveData(game, name, score, elapsedTime) {
       const FUNCTION_URL = "https://us-central1-record-f420d.cloudfunctions.net/report";
 
